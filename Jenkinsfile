@@ -7,6 +7,19 @@ pipeline {
             steps {
                 bat 'python --version'
                 bat 'python -m pip install -r requirements.txt'
+
+                bat 'if exist build rmdir /s /q build'
+                bat 'mkdir build'
+
+                bat 'copy app.py build\\app.py'
+                bat 'copy prediction.py build\\prediction.py'
+                bat 'copy housing_price_model_final.pkl build\\housing_price_model_final.pkl'
+                bat 'copy requirements.txt build\\requirements.txt'
+            }
+            post {
+                success {
+                    archiveArtifacts artifacts: 'build/**', fingerprint: true
+                }
             }
         }
 
@@ -33,32 +46,54 @@ pipeline {
             }
         }
 
-        stage('Deployment') {
+        stage('Deploy') {
             steps {
-                bat 'if exist deployment rmdir /s /q deployment'
-                bat 'mkdir deployment'
-                bat 'copy app.py deployment\\app.py'
-                bat 'copy prediction.py deployment\\prediction.py'
-                bat 'copy housing_price_model_final.pkl deployment\\housing_price_model_final.pkl'
-                bat 'copy requirements.txt deployment\\requirements.txt'
+                bat 'if exist staging rmdir /s /q staging'
+                bat 'mkdir staging'
+
+                bat 'xcopy build staging /E /I /Y'
+
+                bat 'echo Deploying verified application to staging environment'
+                bat 'echo Staging deployment completed successfully'
             }
         }
 
         stage('Release') {
             steps {
+                bat 'if exist production rmdir /s /q production'
+                bat 'mkdir production'
+
+                bat 'xcopy staging production /E /I /Y'
+
                 bat 'if exist release.zip del /f /q release.zip'
-                bat 'powershell -Command "Compress-Archive -Path deployment\\* -DestinationPath release.zip"'
+                bat 'powershell -Command "Compress-Archive -Path production\\* -DestinationPath release.zip"'
+
                 archiveArtifacts artifacts: 'release.zip', fingerprint: true
+
+                bat 'echo Production release completed successfully'
             }
         }
 
         stage('Monitoring') {
             steps {
-                bat 'echo Jenkins build monitoring completed successfully'
+                bat 'echo Starting production application monitoring'
+                bat 'python -c "import urllib.request; print(urllib.request.urlopen(''http://localhost:8501'', timeout=10).status)"'
+
+                bat 'echo Production application health check passed'
+                bat 'echo Monitoring status: HEALTHY'
                 bat 'echo Build number: %BUILD_NUMBER%'
                 bat 'echo Job name: %JOB_NAME%'
-                bat 'echo Build result: %BUILD_ID%'
             }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline completed successfully: Build -> Test -> Code Quality -> Security -> Deploy -> Release -> Monitoring'
+        }
+
+        failure {
+            echo 'Pipeline failed. Review the failed stage and console output.'
         }
     }
 }
