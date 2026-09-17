@@ -80,7 +80,7 @@ pipeline {
 
                 echo 'Stopping previous production application if running...'
 
-                bat """powershell -NoProfile -Command "\$connections=Get-NetTCPConnection -LocalPort 8501 -State Listen -ErrorAction SilentlyContinue; foreach(\$connection in \$connections){Stop-Process -Id \$connection.OwningProcess -Force -ErrorAction SilentlyContinue}" """
+                bat """powershell -NoProfile -Command "try { \$connections=Get-NetTCPConnection -LocalPort 8501 -State Listen -ErrorAction SilentlyContinue; foreach(\$connection in \$connections){ Write-Host ('Stopping process PID ' + \$connection.OwningProcess); Stop-Process -Id \$connection.OwningProcess -Force -ErrorAction SilentlyContinue } } catch { Write-Host 'No previous production process found.' }; exit 0" """
 
                 echo 'Starting Streamlit production application on port 8501...'
 
