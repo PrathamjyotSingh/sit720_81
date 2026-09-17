@@ -77,8 +77,8 @@ pipeline {
         stage('Monitoring') {
             steps {
                 bat 'echo Starting production application monitoring'
-                bat 'python -c "import urllib.request; print(urllib.request.urlopen(''http://localhost:8501'', timeout=10).status)"'
-
+                bat 'echo Checking production application health'
+                bat 'python -c "import urllib.request; response=urllib.request.urlopen(chr(104)+chr(116)+chr(116)+chr(112)+chr(58)+chr(47)+chr(47)+chr(108)+chr(111)+chr(99)+chr(97)+chr(108)+chr(104)+chr(111)+chr(115)+chr(116)+chr(58)+chr(56)+chr(53)+chr(48)+chr(49), timeout=10); print(response.status)"'
                 bat 'echo Production application health check passed'
                 bat 'echo Monitoring status: HEALTHY'
                 bat 'echo Build number: %BUILD_NUMBER%'
