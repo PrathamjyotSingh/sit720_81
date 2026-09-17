@@ -46,8 +46,9 @@ pipeline {
 
         stage('Deploy') {
             steps {
+
                 echo '============================================'
-                echo 'DEPLOYING TO STAGING'
+                echo 'DEPLOYING APPLICATION TO STAGING'
                 echo '============================================'
 
                 bat 'if exist staging rmdir /s /q staging'
@@ -59,16 +60,17 @@ pipeline {
 
                 bat 'start "Streamlit-Staging" /B cmd /c "python -m streamlit run staging\\app.py --server.port 8502 --server.address 127.0.0.1 --server.headless true > staging.log 2>&1"'
 
-                echo 'Waiting for staging application...'
+                echo 'Waiting for staging application to start...'
 
-                bat 'powershell -NoProfile -Command "$ok=$false; for($i=0; $i -lt 15; $i++){ try{$r=Invoke-WebRequest -Uri http://127.0.0.1:8502 -UseBasicParsing -TimeoutSec 3; if($r.StatusCode -eq 200){$ok=$true; break}} catch{}; Start-Sleep -Seconds 2 }; if(-not $ok){Write-Host ''STAGING DEPLOYMENT FAILED''; if(Test-Path staging.log){Get-Content staging.log}; exit 1}; Write-Host ''STAGING DEPLOYMENT SUCCESSFUL''"'
+                bat """powershell -NoProfile -Command "\$ok=\$false; for(\$i=0; \$i -lt 15; \$i++){ try{\$r=Invoke-WebRequest -Uri http://127.0.0.1:8502 -UseBasicParsing -TimeoutSec 3; if(\$r.StatusCode -eq 200){\$ok=\$true; break} } catch{}; Start-Sleep -Seconds 2 }; if(-not \$ok){Write-Host 'STAGING DEPLOYMENT FAILED'; if(Test-Path staging.log){Get-Content staging.log}; exit 1}; Write-Host 'STAGING DEPLOYMENT SUCCESSFUL'\""""
             }
         }
 
         stage('Release') {
             steps {
+
                 echo '============================================'
-                echo 'RELEASING TO PRODUCTION'
+                echo 'RELEASING APPLICATION TO PRODUCTION'
                 echo '============================================'
 
                 bat 'if exist production rmdir /s /q production'
@@ -78,15 +80,15 @@ pipeline {
 
                 echo 'Stopping previous production application if running...'
 
-                bat 'powershell -NoProfile -Command "$connections=Get-NetTCPConnection -LocalPort 8501 -State Listen -ErrorAction SilentlyContinue; foreach($connection in $connections){Stop-Process -Id $connection.OwningProcess -Force -ErrorAction SilentlyContinue}"'
+                bat """powershell -NoProfile -Command "\$connections=Get-NetTCPConnection -LocalPort 8501 -State Listen -ErrorAction SilentlyContinue; foreach(\$connection in \$connections){Stop-Process -Id \$connection.OwningProcess -Force -ErrorAction SilentlyContinue}" """
 
                 echo 'Starting Streamlit production application on port 8501...'
 
                 bat 'start "Streamlit-Production" /B cmd /c "python -m streamlit run production\\app.py --server.port 8501 --server.address 127.0.0.1 --server.headless true > production.log 2>&1"'
 
-                echo 'Waiting for production application...'
+                echo 'Waiting for production application to start...'
 
-                bat 'powershell -NoProfile -Command "$ok=$false; for($i=0; $i -lt 15; $i++){ try{$r=Invoke-WebRequest -Uri http://127.0.0.1:8501 -UseBasicParsing -TimeoutSec 3; if($r.StatusCode -eq 200){$ok=$true; break}} catch{}; Start-Sleep -Seconds 2 }; if(-not $ok){Write-Host ''PRODUCTION RELEASE FAILED''; if(Test-Path production.log){Get-Content production.log}; exit 1}; Write-Host ''PRODUCTION RELEASE SUCCESSFUL''"'
+                bat """powershell -NoProfile -Command "\$ok=\$false; for(\$i=0; \$i -lt 15; \$i++){ try{\$r=Invoke-WebRequest -Uri http://127.0.0.1:8501 -UseBasicParsing -TimeoutSec 3; if(\$r.StatusCode -eq 200){\$ok=\$true; break} } catch{}; Start-Sleep -Seconds 2 }; if(-not \$ok){Write-Host 'PRODUCTION RELEASE FAILED'; if(Test-Path production.log){Get-Content production.log}; exit 1}; Write-Host 'PRODUCTION RELEASE SUCCESSFUL'\""""
 
                 bat 'if exist release.zip del /f /q release.zip'
 
@@ -98,11 +100,12 @@ pipeline {
 
         stage('Monitoring') {
             steps {
+
                 echo '============================================'
-                echo 'MONITORING PRODUCTION'
+                echo 'MONITORING PRODUCTION APPLICATION'
                 echo '============================================'
 
-                bat 'powershell -NoProfile -Command "$ok=$false; try{$r=Invoke-WebRequest -Uri http://127.0.0.1:8501 -UseBasicParsing -TimeoutSec 10; if($r.StatusCode -eq 200){$ok=$true}} catch{}; if($ok){Write-Host ''MONITORING: HEALTHY - Production application is responding.''} else {Write-Host ''ALERT: Production application is NOT responding.''; exit 1}"'
+                bat """powershell -NoProfile -Command "\$ok=\$false; try{\$r=Invoke-WebRequest -Uri http://127.0.0.1:8501 -UseBasicParsing -TimeoutSec 10; if(\$r.StatusCode -eq 200){\$ok=\$true}} catch{}; if(\$ok){Write-Host 'MONITORING: HEALTHY - Production application is responding.'} else {Write-Host 'ALERT: Production application is NOT responding.'; exit 1}\""""
             }
         }
     }
